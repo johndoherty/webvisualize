@@ -78,7 +78,7 @@ int main()
         return -1;
     }
     glfwMakeContextCurrent(window);
-    // glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     const char * version = (const char *)glGetString(GL_VERSION);
     const char * vendor = (const char *)glGetString(GL_VENDOR);
@@ -183,6 +183,7 @@ void processInput(GLFWwindow *window)
 // ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
+    std::cout << "Width: " << width << ", Height: " << height << std::endl;
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
