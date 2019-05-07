@@ -3,9 +3,9 @@
 #include <GLFW/glfw3.h>
 #include <GLES3/gl3.h>
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -51,8 +51,8 @@ Context& Context::GetInstance() {
 Context::~Context() {
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
+    glDeleteVertexArrays(1, &vao_);
+    glDeleteBuffers(1, &vbo_);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
@@ -69,19 +69,18 @@ bool Context::Initialize() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // uncomment this statement to fix compilation on OS X
 #endif
 
-    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-    if (window == NULL)
+    window_ = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    if (window_ == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return false;
     }
 
-
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 
-    ImGui_ImplGlfw_InitForOpenGL(window, false);
+    ImGui_ImplGlfw_InitForOpenGL(window_, false);
     ImGui_ImplOpenGL3_Init();
 
     ImGuiIO& io = ImGui::GetIO();
@@ -89,17 +88,17 @@ bool Context::Initialize() {
 
     ImGui::StyleColorsClassic();
 
-    imgui = ImGui::GetCurrentContext();
+    imgui_ = ImGui::GetCurrentContext();
 
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, ResizeWindowCallback);
-    glfwSetMouseButtonCallback(window, MouseButtonCallback);
+    glfwMakeContextCurrent(window_);
+    glfwSetFramebufferSizeCallback(window_, ResizeWindowCallback);
+    glfwSetMouseButtonCallback(window_, MouseButtonCallback);
 
-    glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
-    glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
-    glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
+    glfwSetScrollCallback(window_, ImGui_ImplGlfw_ScrollCallback);
+    glfwSetKeyCallback(window_, ImGui_ImplGlfw_KeyCallback);
+    glfwSetCharCallback(window_, ImGui_ImplGlfw_CharCallback);
 
-    glfwSetWindowUserPointer(window, this);
+    glfwSetWindowUserPointer(window_, this);
 
     const char * version = (const char *)glGetString(GL_VERSION);
     const char * vendor = (const char *)glGetString(GL_VENDOR);
@@ -132,14 +131,14 @@ bool Context::Initialize() {
         return false;
     }
     // link shaders
-    shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
+    shader_program_ = glCreateProgram();
+    glAttachShader(shader_program_, vertexShader);
+    glAttachShader(shader_program_, fragmentShader);
+    glLinkProgram(shader_program_);
     // check for linking errors
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    glGetProgramiv(shader_program_, GL_LINK_STATUS, &success);
     if (!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+        glGetProgramInfoLog(shader_program_, 512, NULL, infoLog);
         std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
         return true;
     }
@@ -151,24 +150,30 @@ bool Context::Initialize() {
     float vertices[] = {
         -0.5f, -0.5f, 0.0f, // left  
          0.5f, -0.5f, 0.0f, // right 
-         0.0f,  0.5f, 0.0f  // top   
-    }; 
+         0.5f,  0.5f, 0.0f,  // top right   
+         -0.5f,  0.5f, 0.0f  // top left   
+    };
 
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-    glBindVertexArray(VAO);
+    unsigned int indices[] = {0u, 1u, 2u, 2u, 0u, 3u};
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glGenVertexArrays(1, &vao_);
+    glGenBuffers(1, &vbo_);
+    glGenBuffers(1, &ebo_);
+
+    glBindVertexArray(vao_);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+    // note that this is allowed, the call to glVertexAttribPointer registered vbo_ as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
 
-    // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
+    // You can unbind the vao_ afterwards so other vao_ calls won't accidentally modify this vao_, but this rarely happens. Modifying other
     // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
     glBindVertexArray(0);
 
@@ -181,29 +186,22 @@ void Context::Loop() {
     // TODO: Make const
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    ImGui::SetCurrentContext(imgui);
+    ImGui::SetCurrentContext(imgui_);
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    bool show_demo_window = false;
-    bool show_another_window = false;
+    bool show_window = true;
 
-    // 1. Show a simple window.
-    // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
     {
-      ImGui::Begin("Another Window", &show_another_window);
+      ImGui::Begin("Debug", &show_window);
       static float f = 0.0f;
       static int counter = 0;
-      ImGui::Text("Hello, world!");                           // Display some text (you can use a format string too)
-      ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-      ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+      ImGui::Text("Hello, world!");
+      ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+      ImGui::ColorEdit3("clear color", (float*)&clear_color);
 
-      ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our windows open/close state
-      ImGui::Checkbox("Another Window", &show_another_window);
-
-      if (ImGui::Button("Button"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
-          counter++;
+      if (ImGui::Button("Button")) counter++;
       ImGui::SameLine();
       ImGui::Text("counter = %d", counter);
 
@@ -211,37 +209,20 @@ void Context::Loop() {
       ImGui::End();
     }
 
-        // 2. Show another simple window. In most cases you will use an explicit Begin/End pair to name your windows.
-    if (show_another_window)
-    {
-      ImGui::Begin("Another Window", &show_another_window);
-      ImGui::Text("Hello from another window!");
-      if (ImGui::Button("Close Me"))
-          show_another_window = false;
-      ImGui::End();
-    }
-
-    // 3. Show the ImGui demo window. Most of the sample code is in ImGui::ShowDemoWindow(). Read its code to learn more about Dear ImGui!
-    if (show_demo_window)
-    {
-      ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver); // Normally user code doesn't need/want to call this because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
-      ImGui::ShowDemoWindow(&show_demo_window);
-    }
-
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glUseProgram(shaderProgram);
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glUseProgram(shader_program_);
+    glBindVertexArray(vao_);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    glfwSwapBuffers(window);
+    glfwSwapBuffers(window_);
     glfwPollEvents();
-    glfwMakeContextCurrent(window);
+    glfwMakeContextCurrent(window_);
 }
 
 void Context::Run() {
@@ -251,7 +232,7 @@ void Context::Run() {
 }
 
 void Context::ProcessInput() {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) emscripten_run_script("alert('hi')");
+    if (glfwGetKey(window_, GLFW_KEY_ESCAPE) == GLFW_PRESS) emscripten_run_script("alert('hi')");
 }
 
 void Context::Resize(int width, int height) {
@@ -262,6 +243,6 @@ void Context::Resize(int width, int height) {
 }
 
 void Context::MouseButton(int button, int action, int mods) {
-    ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+    ImGui_ImplGlfw_MouseButtonCallback(window_, button, action, mods);
     if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) std::cout << "Clicked!" << std::endl;
 }

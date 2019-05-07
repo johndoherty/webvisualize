@@ -3,8 +3,8 @@
 
 #include <GLFW/glfw3.h>
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_internal.h"
+#include "imgui.h"
+#include "imgui_internal.h"
 
 class Context {
 public:
@@ -25,11 +25,12 @@ private:
     void ProcessInput();
     void MouseButton(int button, int action, int mods);
 
-    int shaderProgram;
-    unsigned int VAO;
-    unsigned int VBO;
-    GLFWwindow* window;
-    ImGuiContext* imgui;
+    int shader_program_;
+    unsigned int vao_;
+    unsigned int vbo_;
+    unsigned int ebo_;
+    GLFWwindow* window_;
+    ImGuiContext* imgui_;
 };
 
 #endif // __WEB_VISUALIZE_CONTEXT__
