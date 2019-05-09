@@ -41,6 +41,6 @@ target_link_libraries(webvisualize PRIVATE glfw)
 target_link_libraries(webvisualize PRIVATE ${OPENGL_gl_LIBRARY})
 target_link_libraries(webvisualize PRIVATE ${GLEW_LIBRARIES})
 target_link_libraries(webvisualize PRIVATE imgui)
-target_link_libraries(webvisualize PRIVATE "-s USE_GLFW=3 -s USE_WEBGL2=1 -s FULL_ES3=1 --preload-file data")
+target_link_libraries(webvisualize PRIVATE "-s USE_GLFW=3 -s FULL_ES3=1 --preload-file data")
 
 set_target_properties(webvisualize PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/web")
