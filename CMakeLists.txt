@@ -27,11 +27,6 @@ endif()
 
 set(SOURCE src/main.cpp src/context.cpp)
 
-# TODO: All of this should be moved to a separate distribution step
-# HTML files should not be touched as part of the cmake build process.
-file(GLOB WEB_FILES web/*)
-file(COPY ${WEB_FILES} DESTINATION "${PROJECT_BINARY_DIR}/web")
-
 file(GLOB DATA_FILES data/*)
 file(COPY ${DATA_FILES} DESTINATION "${PROJECT_BINARY_DIR}/data")
 
