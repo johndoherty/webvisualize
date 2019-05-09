@@ -9,3 +9,5 @@
 ## 5/6/2019
 - Added imgui by copying source and headers into the external directory.
 - Added index array or GL_ELEMENT_ARRAY_BUFFER
+- Added color to the shader.
+Next: Create a shader class.
