@@ -194,7 +194,7 @@ Module['FS_createPath']('/', 'data', true, true);
   }
 
  }
- loadPackage({"files": [{"start": 0, "audio": 0, "end": 52764, "filename": "/data/xkcd-script.ttf"}], "remote_package_size": 52764, "package_uuid": "11abe322-ebd4-499a-bd9b-a24143b94172"});
+ loadPackage({"files": [{"start": 0, "audio": 0, "end": 52764, "filename": "/data/xkcd-script.ttf"}], "remote_package_size": 52764, "package_uuid": "470760b2-a634-40ff-8a02-2535ffa0009a"});
 
 })();
 
